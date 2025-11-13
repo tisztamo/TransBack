@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransBack - Translation Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .settings-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results {
+            margin-top: 40px;
+        }
+
+        .result-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-section h2 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.pending {
+            background: #ccc;
+        }
+
+        .status-indicator.processing {
+            background: #667eea;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .status-indicator.complete {
+            background: #4caf50;
+        }
+
+        .status-indicator.error {
+            background: #f44;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .result-content {
+            background: white;
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            min-height: 60px;
+        }
+
+        .result-content.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .error {
+            background: #fee;
+            border-left-color: #f44;
+            color: #c33;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .info-text {
+            color: #666;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TransBack Translation Tool</h1>
+        <p class="subtitle">Translate text with automatic back-translation and quality review</p>
+
+        <form id="translateForm">
+            <div class="form-group">
+                <label for="inputText">Input Text</label>
+                <textarea id="inputText" name="text" placeholder="Enter text to translate..." required></textarea>
+            </div>
+
+            <div class="settings-row">
+                <div class="form-group">
+                    <label for="sourceLanguage">Source Language</label>
+                    <input type="text" id="sourceLanguage" name="source" value="hu" placeholder="e.g., hu, en, de">
+                    <div class="info-text">Language code (default: hu)</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="targetLanguage">Target Language</label>
+                    <input type="text" id="targetLanguage" name="target" value="en" placeholder="e.g., en, hu, fr">
+                    <div class="info-text">Language code (default: en)</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="model">Model</label>
+                    <input type="text" id="model" name="model" value="qwen/qwen3-235b-a22b-2507" placeholder="Model name">
+                    <div class="info-text">OpenRouter model ID</div>
+                </div>
+            </div>
+
+            <button type="submit" id="translateBtn">
+                <span id="buttonText">Translate</span>
+                <span id="loadingSpinner" class="loading hidden"></span>
+            </button>
+        </form>
+
+        <div class="results" id="results">
+            <div class="result-section">
+                <h2>
+                    <span class="status-indicator pending" id="translatedStatus"></span>
+                    Translated Text
+                </h2>
+                <div class="result-content empty" id="translatedOutput">Translation will appear here...</div>
+            </div>
+
+            <div class="result-section">
+                <h2>
+                    <span class="status-indicator pending" id="backTranslatedStatus"></span>
+                    Back-Translated Text
+                </h2>
+                <div class="result-content empty" id="backTranslatedOutput">Back-translation will appear here...</div>
+            </div>
+
+            <div class="result-section">
+                <h2>
+                    <span class="status-indicator pending" id="reviewStatus"></span>
+                    Quality Review
+                </h2>
+                <div class="result-content empty" id="reviewOutput">Quality review will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('translateForm');
+        const translateBtn = document.getElementById('translateBtn');
+        const buttonText = document.getElementById('buttonText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const translatedOutput = document.getElementById('translatedOutput');
+        const backTranslatedOutput = document.getElementById('backTranslatedOutput');
+        const reviewOutput = document.getElementById('reviewOutput');
+        const translatedStatus = document.getElementById('translatedStatus');
+        const backTranslatedStatus = document.getElementById('backTranslatedStatus');
+        const reviewStatus = document.getElementById('reviewStatus');
+
+        function updateStatus(element, status) {
+            element.className = `status-indicator ${status}`;
+        }
+
+        function parseSSE(text) {
+            const lines = text.split('\n');
+            let eventType = null;
+            let eventData = null;
+
+            for (const line of lines) {
+                if (line.startsWith('event:')) {
+                    eventType = line.substring(6).trim();
+                } else if (line.startsWith('data:')) {
+                    eventData = line.substring(5).trim();
+                }
+            }
+
+            if (eventType && eventData) {
+                try {
+                    return {
+                        event: eventType,
+                        data: JSON.parse(eventData)
+                    };
+                } catch (e) {
+                    console.error('Failed to parse SSE data:', eventData, e);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Get form values
+            const text = document.getElementById('inputText').value;
+            const source = document.getElementById('sourceLanguage').value || 'hu';
+            const target = document.getElementById('targetLanguage').value || 'en';
+            const model = document.getElementById('model').value || 'qwen/qwen3-235b-a22b-2507';
+
+            // Show loading state
+            translateBtn.disabled = true;
+            buttonText.textContent = 'Translating...';
+            loadingSpinner.classList.remove('hidden');
+
+            // Reset status indicators
+            updateStatus(translatedStatus, 'processing');
+            updateStatus(backTranslatedStatus, 'pending');
+            updateStatus(reviewStatus, 'pending');
+
+            // Clear previous results
+            translatedOutput.textContent = 'Processing...';
+            translatedOutput.className = 'result-content';
+            backTranslatedOutput.textContent = 'Waiting for translation...';
+            backTranslatedOutput.className = 'result-content empty';
+            reviewOutput.textContent = 'Waiting for back-translation...';
+            reviewOutput.className = 'result-content empty';
+
+            try {
+                const response = await fetch('/translate/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text, source, target, model })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const eventBlocks = buffer.split('\n\n');
+                    
+                    // Keep the last incomplete event in buffer
+                    buffer = eventBlocks.pop() || '';
+
+                    for (const eventBlock of eventBlocks) {
+                        if (eventBlock.trim()) {
+                            console.log('Raw event block:', eventBlock);
+                            const event = parseSSE(eventBlock);
+                            console.log('Parsed event:', event);
+                            
+                            if (event) {
+                                if (event.event === 'translated' && event.data && event.data.translated) {
+                                    console.log('Updating translated text');
+                                    translatedOutput.textContent = event.data.translated;
+                                    translatedOutput.className = 'result-content';
+                                    updateStatus(translatedStatus, 'complete');
+                                    updateStatus(backTranslatedStatus, 'processing');
+                                    backTranslatedOutput.textContent = 'Processing...';
+                                    backTranslatedOutput.className = 'result-content';
+                                } else if (event.event === 'back_translated' && event.data && event.data.back_translated) {
+                                    console.log('Updating back-translated text');
+                                    backTranslatedOutput.textContent = event.data.back_translated;
+                                    backTranslatedOutput.className = 'result-content';
+                                    updateStatus(backTranslatedStatus, 'complete');
+                                    updateStatus(reviewStatus, 'processing');
+                                    reviewOutput.textContent = 'Processing...';
+                                    reviewOutput.className = 'result-content';
+                                } else if (event.event === 'review' && event.data && event.data.review) {
+                                    console.log('Updating review text');
+                                    reviewOutput.textContent = event.data.review;
+                                    reviewOutput.className = 'result-content';
+                                    updateStatus(reviewStatus, 'complete');
+                                } else if (event.event === 'error') {
+                                    const errorMsg = (event.data && event.data.error) || 'Unknown error';
+                                    translatedOutput.textContent = `Error: ${errorMsg}`;
+                                    translatedOutput.className = 'result-content error';
+                                    updateStatus(translatedStatus, 'error');
+                                    updateStatus(backTranslatedStatus, 'error');
+                                    updateStatus(reviewStatus, 'error');
+                                    throw new Error(errorMsg);
+                                } else if (event.event === 'complete') {
+                                    console.log('Translation complete');
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                // Display error
+                translatedOutput.textContent = `Error: ${error.message}`;
+                translatedOutput.className = 'result-content error';
+                backTranslatedOutput.textContent = 'N/A';
+                backTranslatedOutput.className = 'result-content empty';
+                reviewOutput.textContent = 'N/A';
+                reviewOutput.className = 'result-content empty';
+                updateStatus(translatedStatus, 'error');
+                updateStatus(backTranslatedStatus, 'error');
+                updateStatus(reviewStatus, 'error');
+            } finally {
+                // Reset button state
+                translateBtn.disabled = false;
+                buttonText.textContent = 'Translate';
+                loadingSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
+
