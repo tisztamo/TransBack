@@ -26,12 +26,12 @@ def index():
 def translate_text():
     """
     Translate text endpoint.
-    
+
     Expected JSON body:
     {
         "text": "Text to translate",
-        "source": "hu",  // optional, default: "hu"
-        "target": "en",  // optional, default: "en"
+        "source": "en",  // optional, default: "en"
+        "target": "af",  // optional, default: "af"
         "model": "qwen/qwen3-235b-a22b-2507"  // optional
     }
     
@@ -58,8 +58,8 @@ def translate_text():
         if not text:
             return jsonify({"error": "Missing required field: text"}), 400
         
-        source = data.get('source', 'hu')
-        target = data.get('target', 'en')
+        source = data.get('source', 'en')
+        target = data.get('target', 'af')
         model = data.get('model', 'qwen/qwen3-235b-a22b-2507')
         
         logging.info(f"Translation request: {len(text)} chars, {source} -> {target}, model: {model}")
@@ -92,12 +92,12 @@ def translate_text():
 def translate_text_stream():
     """
     Streaming translation endpoint using Server-Sent Events (SSE).
-    
+
     Expected JSON body:
     {
         "text": "Text to translate",
-        "source": "hu",  // optional, default: "hu"
-        "target": "en",  // optional, default: "en"
+        "source": "en",  // optional, default: "en"
+        "target": "af",  // optional, default: "af"
         "model": "qwen/qwen3-235b-a22b-2507"  // optional
     }
     
@@ -129,8 +129,8 @@ def translate_text_stream():
             yield f"event: error\ndata: {json.dumps({'error': 'Missing required field: text'})}\n\n"
         return Response(error_gen(), mimetype='text/event-stream')
     
-    source = data.get('source', 'hu')
-    target = data.get('target', 'en')
+    source = data.get('source', 'en')
+    target = data.get('target', 'af')
     model = data.get('model', 'qwen/qwen3-235b-a22b-2507')
     
     logging.info(f"Streaming translation request: {len(text)} chars, {source} -> {target}, model: {model}")

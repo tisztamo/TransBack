@@ -254,14 +254,14 @@
             <div class="settings-row">
                 <div class="form-group">
                     <label for="sourceLanguage">Source Language</label>
-                    <input type="text" id="sourceLanguage" name="source" value="hu" placeholder="e.g., hu, en, de">
-                    <div class="info-text">Language code (default: hu)</div>
+                    <input type="text" id="sourceLanguage" name="source" value="en" placeholder="e.g., en, hu, de">
+                    <div class="info-text">Language code (default: en)</div>
                 </div>
 
                 <div class="form-group">
                     <label for="targetLanguage">Target Language</label>
-                    <input type="text" id="targetLanguage" name="target" value="en" placeholder="e.g., en, hu, fr">
-                    <div class="info-text">Language code (default: en)</div>
+                    <input type="text" id="targetLanguage" name="target" value="af" placeholder="e.g., af, en, fr">
+                    <div class="info-text">Language code (default: af)</div>
                 </div>
 
                 <div class="form-group">
@@ -412,8 +412,8 @@
 
             // Get form values
             const text = document.getElementById('inputText').value;
-            const source = document.getElementById('sourceLanguage').value || 'hu';
-            const target = document.getElementById('targetLanguage').value || 'en';
+            const source = document.getElementById('sourceLanguage').value || 'en';
+            const target = document.getElementById('targetLanguage').value || 'af';
             const model = document.getElementById('model').value || 'qwen/qwen3-235b-a22b-2507';
 
             // Show loading state
