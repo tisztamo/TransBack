@@ -5,5 +5,3 @@ Back-translated text:
 {back_translated}
 
 Do these texts have the same meaning? If yes, respond with 'SAME'. If no, describe the differences concisely.
-
-
