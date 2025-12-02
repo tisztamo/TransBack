@@ -22,6 +22,11 @@ def index():
     """Serve the HTML frontend"""
     return send_from_directory('.', 'index.html')
 
+@app.route('/<path:filename>')
+def serve_static(filename):
+    """Serve static files (JS, CSS, etc.)"""
+    return send_from_directory('.', filename)
+
 @app.route('/translate', methods=['POST'])
 def translate_text():
     """

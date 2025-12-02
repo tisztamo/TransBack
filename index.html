@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransBack - Translation Tool</title>
-    <script src="diff-match-patch.js"></script>
     <style>
         * {
             margin: 0;
@@ -222,21 +221,20 @@
             min-height: 100px;
         }
 
-        /* diff-match-patch styles */
-        ins {
-            background-color: #d4edda;
-            color: #155724;
-            text-decoration: none;
-            padding: 2px 4px;
+        /* Custom text comparison styles */
+        .word-diff {
+            background-color: #fff3cd;
+            padding: 2px 1px;
             border-radius: 3px;
+            display: inline-block;
         }
 
-        del {
-            background-color: #f8d7da;
-            color: #721c24;
-            text-decoration: none;
-            padding: 2px 4px;
-            border-radius: 3px;
+        .char-diff {
+            background-color: #ffc107;
+            color: #856404;
+            font-weight: 600;
+            padding: 1px 2px;
+            border-radius: 2px;
         }
     </style>
 </head>
@@ -321,232 +319,8 @@
         </div>
     </div>
 
-    <script>
-        const form = document.getElementById('translateForm');
-        const translateBtn = document.getElementById('translateBtn');
-        const buttonText = document.getElementById('buttonText');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const translatedOutput = document.getElementById('translatedOutput');
-        const backTranslatedOutput = document.getElementById('backTranslatedOutput');
-        const reviewOutput = document.getElementById('reviewOutput');
-        const translatedStatus = document.getElementById('translatedStatus');
-        const backTranslatedStatus = document.getElementById('backTranslatedStatus');
-        const reviewStatus = document.getElementById('reviewStatus');
-        const comparisonStatus = document.getElementById('comparisonStatus');
-        const originalText = document.getElementById('originalText');
-        const backTranslatedText = document.getElementById('backTranslatedText');
-
-        function updateStatus(element, status) {
-            element.className = `status-indicator ${status}`;
-        }
-
-        function parseSSE(text) {
-            const lines = text.split('\n');
-            let eventType = null;
-            let eventData = null;
-
-            for (const line of lines) {
-                if (line.startsWith('event:')) {
-                    eventType = line.substring(6).trim();
-                } else if (line.startsWith('data:')) {
-                    eventData = line.substring(5).trim();
-                }
-            }
-
-            if (eventType && eventData) {
-                try {
-                    return {
-                        event: eventType,
-                        data: JSON.parse(eventData)
-                    };
-                } catch (e) {
-                    console.error('Failed to parse SSE data:', eventData, e);
-                    return null;
-                }
-            }
-            return null;
-        }
-
-        function simpleWordDiff(text1, text2) {
-            const words1 = text1.split(/\s+/);
-            const words2 = text2.split(/\s+/);
-            const maxLength = Math.max(words1.length, words2.length);
-            let result = '';
-
-            for (let i = 0; i < maxLength; i++) {
-                const word1 = words1[i] || '';
-                const word2 = words2[i] || '';
-
-                if (word1 === word2) {
-                    result += word1 + ' ';
-                } else if (word1 && !word2) {
-                    result += `<del style="background:#ffe6e6; color:#721c24;">${word1}</del> `;
-                } else if (!word1 && word2) {
-                    result += `<ins style="background:#e6ffe6; color:#155724;">${word2}</ins> `;
-                } else {
-                    result += `<span style="background:#fff3cd; color:#856404;">${word2}</span> `;
-                }
-            }
-
-            return result.trim();
-        }
-
-        function highlightDifferences(text1, text2) {
-            try {
-                if (typeof diff_match_patch === 'undefined') {
-                    console.warn('diff_match_patch library not loaded, using fallback');
-                    return simpleWordDiff(text1, text2);
-                }
-                const dmp = new diff_match_patch();
-                const diffs = dmp.diff_main(text1, text2);
-                dmp.diff_cleanupSemantic(diffs);
-                return dmp.diff_prettyHtml(diffs);
-            } catch (error) {
-                console.error('Error in highlightDifferences:', error);
-                return simpleWordDiff(text1, text2);
-            }
-        }
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            // Get form values
-            const text = document.getElementById('inputText').value;
-            const source = document.getElementById('sourceLanguage').value || 'en';
-            const target = document.getElementById('targetLanguage').value || 'af';
-            const model = document.getElementById('model').value || 'qwen/qwen3-235b-a22b-2507';
-
-            // Show loading state
-            translateBtn.disabled = true;
-            buttonText.textContent = 'Translating...';
-            loadingSpinner.classList.remove('hidden');
-
-            // Reset status indicators
-            updateStatus(translatedStatus, 'processing');
-            updateStatus(backTranslatedStatus, 'pending');
-            updateStatus(reviewStatus, 'pending');
-            updateStatus(comparisonStatus, 'pending');
-
-            // Clear previous results
-            translatedOutput.textContent = 'Processing...';
-            translatedOutput.className = 'result-content';
-            backTranslatedOutput.textContent = 'Waiting for translation...';
-            backTranslatedOutput.className = 'result-content empty';
-            reviewOutput.textContent = 'Waiting for back-translation...';
-            reviewOutput.className = 'result-content empty';
-            originalText.innerHTML = 'Waiting for back-translation...';
-            originalText.className = 'result-content empty';
-            backTranslatedText.innerHTML = 'Waiting for back-translation...';
-            backTranslatedText.className = 'result-content empty';
-
-            try {
-                const response = await fetch('/translate/stream', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ text, source, target, model })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const eventBlocks = buffer.split('\n\n');
-                    
-                    // Keep the last incomplete event in buffer
-                    buffer = eventBlocks.pop() || '';
-
-                    for (const eventBlock of eventBlocks) {
-                        if (eventBlock.trim()) {
-                            console.log('Raw event block:', eventBlock);
-                            const event = parseSSE(eventBlock);
-                            console.log('Parsed event:', event);
-                            
-                            if (event) {
-                                if (event.event === 'translated' && event.data && event.data.translated) {
-                                    console.log('Updating translated text');
-                                    translatedOutput.textContent = event.data.translated;
-                                    translatedOutput.className = 'result-content';
-                                    updateStatus(translatedStatus, 'complete');
-                                    updateStatus(backTranslatedStatus, 'processing');
-                                    backTranslatedOutput.textContent = 'Processing...';
-                                    backTranslatedOutput.className = 'result-content';
-                                } else if (event.event === 'back_translated' && event.data && event.data.back_translated) {
-                                    console.log('Updating back-translated text');
-                                    backTranslatedOutput.textContent = event.data.back_translated;
-                                    backTranslatedOutput.className = 'result-content';
-                                    updateStatus(backTranslatedStatus, 'complete');
-                                    updateStatus(reviewStatus, 'processing');
-                                    updateStatus(comparisonStatus, 'processing');
-                                    reviewOutput.textContent = 'Processing...';
-                                    reviewOutput.className = 'result-content';
-
-                                    // Create comparison with highlighting
-                                    const highlightedOriginal = highlightDifferences(text, event.data.back_translated);
-                                    const highlightedBack = highlightDifferences(event.data.back_translated, text);
-
-                                    originalText.innerHTML = highlightedOriginal || text;
-                                    originalText.className = 'result-content';
-                                    backTranslatedText.innerHTML = highlightedBack || event.data.back_translated;
-                                    backTranslatedText.className = 'result-content';
-                                    updateStatus(comparisonStatus, 'complete');
-                                } else if (event.event === 'review' && event.data && event.data.review) {
-                                    console.log('Updating review text');
-                                    reviewOutput.textContent = event.data.review;
-                                    reviewOutput.className = 'result-content';
-                                    updateStatus(reviewStatus, 'complete');
-                                } else if (event.event === 'error') {
-                                    const errorMsg = (event.data && event.data.error) || 'Unknown error';
-                                    translatedOutput.textContent = `Error: ${errorMsg}`;
-                                    translatedOutput.className = 'result-content error';
-                                    updateStatus(translatedStatus, 'error');
-                                    updateStatus(backTranslatedStatus, 'error');
-                                    updateStatus(reviewStatus, 'error');
-                                    updateStatus(comparisonStatus, 'error');
-                                    throw new Error(errorMsg);
-                                } else if (event.event === 'complete') {
-                                    console.log('Translation complete');
-                                }
-                            }
-                        }
-                    }
-                }
-
-            } catch (error) {
-                // Display error
-                translatedOutput.textContent = `Error: ${error.message}`;
-                translatedOutput.className = 'result-content error';
-                backTranslatedOutput.textContent = 'N/A';
-                backTranslatedOutput.className = 'result-content empty';
-                reviewOutput.textContent = 'N/A';
-                reviewOutput.className = 'result-content empty';
-                originalText.innerHTML = 'N/A';
-                originalText.className = 'result-content empty';
-                backTranslatedText.innerHTML = 'N/A';
-                backTranslatedText.className = 'result-content empty';
-                updateStatus(translatedStatus, 'error');
-                updateStatus(backTranslatedStatus, 'error');
-                updateStatus(reviewStatus, 'error');
-                updateStatus(comparisonStatus, 'error');
-            } finally {
-                // Reset button state
-                translateBtn.disabled = false;
-                buttonText.textContent = 'Translate';
-                loadingSpinner.classList.add('hidden');
-            }
-        });
-    </script>
+    <script src="textComparison.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
 
