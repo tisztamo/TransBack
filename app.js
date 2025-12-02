@@ -75,6 +75,10 @@ form.addEventListener('submit', async (e) => {
     buttonText.textContent = 'Translating...';
     loadingSpinner.classList.remove('hidden');
 
+    // Scroll to results section
+    const resultsSection = document.getElementById('results');
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
     // Reset status indicators
     updateStatus(translatedStatus, 'processing');
     updateStatus(backTranslatedStatus, 'pending');
