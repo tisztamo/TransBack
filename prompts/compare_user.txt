@@ -1,7 +1,11 @@
 Original text:
+<original_text>
 {original}
+</original_text>
 
 Back-translated text:
+<back_translated_text>
 {back_translated}
+</back_translated_text>
 
-Do these texts have the same meaning? If yes, respond with 'SAME'. If no, describe the differences concisely.
+Do these texts have the same meaning? If yes, respond with exactly 'SAME'. If no, describe the semantic differences concisely.
