@@ -51,7 +51,7 @@
             font-size: 14px;
         }
 
-        textarea, input[type="text"] {
+        textarea, input[type="text"], select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
@@ -59,11 +59,16 @@
             font-size: 14px;
             font-family: inherit;
             transition: border-color 0.3s;
+            background-color: white;
         }
 
-        textarea:focus, input[type="text"]:focus {
+        textarea:focus, input[type="text"]:focus, select:focus {
             outline: none;
             border-color: #667eea;
+        }
+
+        select {
+            cursor: pointer;
         }
 
         textarea {
@@ -265,8 +270,12 @@
 
                 <div class="form-group">
                     <label for="model">Model</label>
-                    <input type="text" id="model" name="model" value="qwen/qwen3-235b-a22b-2507" placeholder="Model name">
-                    <div class="info-text">OpenRouter model ID</div>
+                    <select id="model" name="model">
+                        <option value="qwen/qwen3-235b-a22b-2507" selected>Qwen 3 235B</option>
+                        <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
+                        <option value="z-ai/glm-4.5-air">GLM 4.5 Air</option>
+                    </select>
+                    <div class="info-text">Select translation model</div>
                 </div>
             </div>
 

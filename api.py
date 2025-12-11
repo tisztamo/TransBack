@@ -17,6 +17,17 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+# Allowed models for translation
+ALLOWED_MODELS = {
+    'qwen/qwen3-235b-a22b-2507',
+    'anthropic/claude-haiku-4.5',
+    'z-ai/glm-4.5-air'
+}
+
+def validate_model(model: str) -> bool:
+    """Validate that the model is in the allowed list."""
+    return model in ALLOWED_MODELS
+
 @app.route('/')
 def index():
     """Serve the HTML frontend"""
@@ -68,6 +79,10 @@ def translate_text():
         source = data.get('source', 'en')
         target = data.get('target', 'af')
         model = data.get('model', 'qwen/qwen3-235b-a22b-2507')
+        
+        # Validate model
+        if not validate_model(model):
+            return jsonify({"error": f"Invalid model. Allowed models: {', '.join(sorted(ALLOWED_MODELS))}"}), 400
         
         logging.info(f"Translation request: {len(text)} chars, {source} -> {target}, model: {model}")
         
@@ -143,6 +158,12 @@ def translate_text_stream():
     source = data.get('source', 'en')
     target = data.get('target', 'af')
     model = data.get('model', 'qwen/qwen3-235b-a22b-2507')
+    
+    # Validate model
+    if not validate_model(model):
+        def error_gen():
+            yield f"event: error\ndata: {json.dumps({'error': f'Invalid model. Allowed models: {', '.join(sorted(ALLOWED_MODELS))}'})}\n\n"
+        return Response(error_gen(), mimetype='text/event-stream')
     
     logging.info(f"Streaming translation request: {len(text)} chars, {source} -> {target}, model: {model}")
     
