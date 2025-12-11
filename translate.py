@@ -1,6 +1,10 @@
 # translate.py
 import os, argparse, requests, sys, logging, secrets
 
+MAX_INPUT_LENGTH = 1500
+TRANSLATION_MAX_TOKENS = 600
+COMPARISON_MAX_TOKENS = 200
+
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 def load_prompt(filename: str, **kwargs) -> str:
@@ -38,7 +42,10 @@ def load_prompt(filename: str, **kwargs) -> str:
     return result
 
 def translate(text: str, source: str, target: str, api_key: str,
-              model: str, app_url: str|None=None, app_title: str|None=None) -> str:
+              model: str, app_url: str|None=None, app_title: str|None=None,
+              max_tokens: int = TRANSLATION_MAX_TOKENS) -> str:
+    if len(text) > MAX_INPUT_LENGTH:
+        raise ValueError(f"Input text exceeds {MAX_INPUT_LENGTH} characters")
     logging.info(f"Translating from {source} to {target} using model {model}")
     logging.debug(f"Text length: {len(text)} characters")
     
@@ -69,7 +76,8 @@ def translate(text: str, source: str, target: str, api_key: str,
         "model": model,
         "messages": [
             {"role": "system", "content": system_prompt}
-        ]
+        ],
+        "max_tokens": max_tokens
     }
 
     # Log the full message being sent for review
@@ -87,11 +95,20 @@ def translate(text: str, source: str, target: str, api_key: str,
     r = requests.post(API_URL, headers=headers, json=body, timeout=120)
     r.raise_for_status()
     result = r.json()["choices"][0]["message"]["content"]
+    
+    # Log the AI response
+    logging.info("=" * 60)
+    logging.info("INCOMING TRANSLATION RESPONSE:")
+    logging.info("=" * 60)
+    logging.info(f"Response:\n{result}")
+    logging.info("=" * 60)
+    
     logging.info(f"Translation completed. Result length: {len(result)} characters")
     return result
 
 def compare_meanings(original: str, back_translated: str, language: str, api_key: str,
-                     model: str, app_url: str|None=None, app_title: str|None=None) -> str:
+                     model: str, app_url: str|None=None, app_title: str|None=None,
+                     max_tokens: int = COMPARISON_MAX_TOKENS) -> str:
     logging.info(f"Comparing meanings in {language} using model {model}")
     logging.debug(f"Original length: {len(original)} characters, Back-translated length: {len(back_translated)} characters")
     
@@ -125,7 +142,8 @@ def compare_meanings(original: str, back_translated: str, language: str, api_key
         "model": model,
         "messages": [
             {"role": "system", "content": system_prompt}
-        ]
+        ],
+        "max_tokens": max_tokens
     }
 
     # Log the full message being sent for review
@@ -143,6 +161,14 @@ def compare_meanings(original: str, back_translated: str, language: str, api_key
     r = requests.post(API_URL, headers=headers, json=body, timeout=120)
     r.raise_for_status()
     result = r.json()["choices"][0]["message"]["content"]
+    
+    # Log the AI response
+    logging.info("=" * 60)
+    logging.info("INCOMING COMPARISON RESPONSE:")
+    logging.info("=" * 60)
+    logging.info(f"Response:\n{result}")
+    logging.info("=" * 60)
+    
     logging.info("Meaning comparison completed")
     return result
 
@@ -190,6 +216,11 @@ def main():
     with open(args.input_file, "r", encoding="utf-8") as f:
         src = f.read()
     logging.info(f"Input file read successfully. Length: {len(src)} characters")
+
+    if len(src) > MAX_INPUT_LENGTH:
+        logging.error(f"Input too long: {len(src)} characters (limit {MAX_INPUT_LENGTH})")
+        print(f"Input too long: {len(src)} characters (limit {MAX_INPUT_LENGTH})", file=sys.stderr)
+        sys.exit(1)
 
     logging.info("-" * 60)
     logging.info("Step 1/3: Translating to target language")

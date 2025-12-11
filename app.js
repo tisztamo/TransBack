@@ -16,6 +16,7 @@ const reviewStatus = document.getElementById('reviewStatus');
 const comparisonStatus = document.getElementById('comparisonStatus');
 const originalText = document.getElementById('originalText');
 const backTranslatedText = document.getElementById('backTranslatedText');
+const MAX_INPUT_LENGTH = 1500;
 
 /**
  * Updates the status indicator for a section
@@ -69,6 +70,25 @@ form.addEventListener('submit', async (e) => {
     const source = document.getElementById('sourceLanguage').value || 'en';
     const target = document.getElementById('targetLanguage').value || 'af';
     const model = document.getElementById('model').value || 'qwen/qwen3-235b-a22b-2507';
+
+    if (text.length > MAX_INPUT_LENGTH) {
+        const errorMsg = `Input too long. Limit is ${MAX_INPUT_LENGTH} characters.`;
+        translatedOutput.textContent = `Error: ${errorMsg}`;
+        translatedOutput.className = 'result-content error';
+        backTranslatedOutput.textContent = 'N/A';
+        backTranslatedOutput.className = 'result-content empty';
+        reviewOutput.textContent = 'N/A';
+        reviewOutput.className = 'result-content empty';
+        originalText.innerHTML = 'N/A';
+        originalText.className = 'result-content empty';
+        backTranslatedText.innerHTML = 'N/A';
+        backTranslatedText.className = 'result-content empty';
+        updateStatus(translatedStatus, 'error');
+        updateStatus(backTranslatedStatus, 'error');
+        updateStatus(reviewStatus, 'error');
+        updateStatus(comparisonStatus, 'error');
+        return;
+    }
 
     // Show loading state
     translateBtn.disabled = true;

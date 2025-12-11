@@ -5,7 +5,7 @@ import json
 import logging
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
-from translate import translate, compare_meanings
+from translate import translate, compare_meanings, MAX_INPUT_LENGTH
 
 app = Flask(__name__)
 CORS(app)
@@ -62,6 +62,8 @@ def translate_text():
         text = data.get('text')
         if not text:
             return jsonify({"error": "Missing required field: text"}), 400
+        if len(text) > MAX_INPUT_LENGTH:
+            return jsonify({"error": f"Text too long. Limit is {MAX_INPUT_LENGTH} characters."}), 400
         
         source = data.get('source', 'en')
         target = data.get('target', 'af')
@@ -132,6 +134,10 @@ def translate_text_stream():
     if not text:
         def error_gen():
             yield f"event: error\ndata: {json.dumps({'error': 'Missing required field: text'})}\n\n"
+        return Response(error_gen(), mimetype='text/event-stream')
+    if len(text) > MAX_INPUT_LENGTH:
+        def error_gen():
+            yield f"event: error\ndata: {json.dumps({'error': f'Text too long. Limit is {MAX_INPUT_LENGTH} characters.'})}\n\n"
         return Response(error_gen(), mimetype='text/event-stream')
     
     source = data.get('source', 'en')
